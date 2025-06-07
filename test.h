@@ -24,4 +24,4 @@ std::cerr << #test_suite_name "." #test_name " failed.\n"; \
 std::cout << #test_suite_name "." #test_name " passed.\n"; \
 }
 
-#endif // TEST_H
+#endif
