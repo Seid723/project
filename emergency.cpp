@@ -167,9 +167,49 @@ TEST(EmergencyTest, DelayedResponse) {
     return true;
 }
 
+TEST(EmergencyTest, ZeroUnitsResponse) {
+    std::vector<Situation *> plan = {
+        new Firefighters(0),
+        new Medics(0),
+        new RescueTeam(0)
+    };
+
+    Emergency e(70, 40, 60, 50, 30, plan);
+    e.activate();
+
+    ASSERT_EQ(e.getFireDamage(), 60);
+    ASSERT_EQ(e.getFloodDamage(), 50);
+    ASSERT_EQ(e.getPanic(), 40);
+    ASSERT_EQ(e.getHealth(), 70);
+    ASSERT_EQ(e.getInjuryLevel(), 30);
+
+    return true;
+}
+
+TEST(EmergencyTest, MaxEffectCap) {
+    std::vector<Situation *> plan = {
+        new Firefighters(20),
+        new Medics(10),
+        new RescueTeam(20)
+    };
+
+    Emergency e(70, 40, 60, 50, 30, plan);
+    e.activate();
+
+    ASSERT_TRUE(e.getFireDamage() <= 0);
+    ASSERT_TRUE(e.getFloodDamage() <= 0);
+    ASSERT_TRUE(e.getPanic() < 40);
+    ASSERT_TRUE(e.getHealth() > 70);
+    ASSERT_TRUE(e.getInjuryLevel() < 30);
+
+    return true;
+}
+
 int main() {
     RUN_TEST(EmergencyTest, Initialization);
     RUN_TEST(EmergencyTest, ResponseEffect);
     RUN_TEST(EmergencyTest, DelayedResponse);
+    RUN_TEST(EmergencyTest, ZeroUnitsResponse);
+    RUN_TEST(EmergencyTest, MaxEffectCap);
     return 0;
 }
