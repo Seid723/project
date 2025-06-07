@@ -1,13 +1,15 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <string>
 #include "test.h"
 
 class Emergency;
 
 class Situation {
 public:
-    virtual void respond([[maybe_unused]] Emergency &e) {}
+    virtual void respond(Emergency &e) = 0;
+    virtual std::string description() const = 0;
     virtual ~Situation() = default;
 };
 
@@ -39,8 +41,9 @@ public:
     void setInjuryLevel(double i) { injury_level = i; }
 
     void activate() {
-        for (auto *s : response_plan)
+        for (auto *s : response_plan) {
             s->respond(*this);
+        }
     }
 
     Emergency(const Emergency &) = delete;
@@ -57,9 +60,12 @@ class Firefighters : public Situation {
 public:
     Firefighters(int u) : units(u) {}
     void respond(Emergency &e) override {
-        double impact = units * 0.1;
+        double impact = std::min(units * 0.1, 1.0);
         e.setFireDamage(e.getFireDamage() * (1 - impact));
         e.setPanic(e.getPanic() * (1 - impact / 2));
+    }
+    std::string description() const override {
+        return "Firefighters with " + std::to_string(units) + " units";
     }
 };
 
@@ -68,9 +74,12 @@ class Medics : public Situation {
 public:
     Medics(int s) : staff(s) {}
     void respond(Emergency &e) override {
-        double heal = staff * 0.2;
+        double heal = std::min(staff * 0.2, 1.0);
         e.setInjuryLevel(e.getInjuryLevel() * (1 - heal));
-        e.setHealth(e.getHealth() + heal);
+        e.setHealth(e.getHealth() + heal * 100);
+    }
+    std::string description() const override {
+        return "Medics with " + std::to_string(staff) + " staff";
     }
 };
 
@@ -79,9 +88,31 @@ class RescueTeam : public Situation {
 public:
     RescueTeam(int b) : boats(b) {}
     void respond(Emergency &e) override {
-        double effect = boats * 0.1;
+        double effect = std::min(boats * 0.1, 1.0);
         e.setFloodDamage(e.getFloodDamage() * (1 - effect));
         e.setPanic(e.getPanic() * (1 - effect));
+    }
+    std::string description() const override {
+        return "Rescue Team with " + std::to_string(boats) + " boats";
+    }
+};
+
+class DelayedResponse : public Situation {
+    Situation *inner;
+    int delayRounds;
+    int currentRound = 0;
+public:
+    DelayedResponse(Situation *s, int delay) : inner(s), delayRounds(delay) {}
+    void respond(Emergency &e) override {
+        if (++currentRound >= delayRounds) {
+            inner->respond(e);
+        }
+    }
+    std::string description() const override {
+        return "Delayed: " + inner->description();
+    }
+    ~DelayedResponse() override {
+        delete inner;
     }
 };
 
@@ -122,8 +153,23 @@ TEST(EmergencyTest, ResponseEffect) {
     return true;
 }
 
+TEST(EmergencyTest, DelayedResponse) {
+    std::vector<Situation *> plan = {
+        new DelayedResponse(new Firefighters(5), 2)
+    };
+
+    Emergency e(70, 40, 60, 50, 30, plan);
+    e.activate();
+    ASSERT_EQ(e.getFireDamage(), 60);
+    e.activate();
+    ASSERT_TRUE(e.getFireDamage() < 60);
+
+    return true;
+}
+
 int main() {
     RUN_TEST(EmergencyTest, Initialization);
     RUN_TEST(EmergencyTest, ResponseEffect);
+    RUN_TEST(EmergencyTest, DelayedResponse);
     return 0;
 }
