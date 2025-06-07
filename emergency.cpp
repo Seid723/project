@@ -205,11 +205,52 @@ TEST(EmergencyTest, MaxEffectCap) {
     return true;
 }
 
+TEST(EmergencyTest, MultipleActivations) {
+    std::vector<Situation *> plan = {
+        new Firefighters(2),
+        new Medics(1),
+        new RescueTeam(1)
+    };
+
+    Emergency e(70, 40, 60, 50, 30, plan);
+    e.activate();
+    e.activate();
+
+    ASSERT_TRUE(e.getFireDamage() < 60);
+    ASSERT_TRUE(e.getFloodDamage() < 50);
+    ASSERT_TRUE(e.getPanic() < 40);
+    ASSERT_TRUE(e.getHealth() > 70);
+    ASSERT_TRUE(e.getInjuryLevel() < 30);
+
+    return true;
+}
+
+TEST(EmergencyTest, NegativeValues) {
+    std::vector<Situation *> plan = {
+        new Firefighters(-1),
+        new Medics(-1),
+        new RescueTeam(-1)
+    };
+
+    Emergency e(70, 40, 60, 50, 30, plan);
+    e.activate();
+
+    ASSERT_TRUE(e.getFireDamage() >= 60);
+    ASSERT_TRUE(e.getFloodDamage() >= 50);
+    ASSERT_TRUE(e.getPanic() >= 40);
+    ASSERT_TRUE(e.getHealth() <= 70);
+    ASSERT_TRUE(e.getInjuryLevel() >= 30);
+
+    return true;
+}
+
 int main() {
     RUN_TEST(EmergencyTest, Initialization);
     RUN_TEST(EmergencyTest, ResponseEffect);
     RUN_TEST(EmergencyTest, DelayedResponse);
     RUN_TEST(EmergencyTest, ZeroUnitsResponse);
     RUN_TEST(EmergencyTest, MaxEffectCap);
+    RUN_TEST(EmergencyTest, MultipleActivations);
+    RUN_TEST(EmergencyTest, NegativeValues);
     return 0;
 }
